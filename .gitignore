@@ -1,0 +1,6 @@
+./out
+*.exe
+*.exp
+*.ilk
+*.lib
+*.pdb

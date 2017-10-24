@@ -1,0 +1,2 @@
+clear
+./out/*.exe
