@@ -87,16 +87,20 @@ class val GameTime
         end
 
 actor Main
-    var window: Pointer[_SDLWindow val] ref
-    var renderer: Pointer[_SDLRenderer val] ref
-    var is_done : Bool = false
 
     let timers: Timers = Timers
     let render_loop: Timer tag
+    let _env : Env
+
+    var window: Pointer[_SDLWindow val] ref
+    var renderer: Pointer[_SDLRenderer val] ref
+    var is_done : Bool = false
     var game_time : GameTime
     var frame_index : U64 = 0
 
+
     new create(env : Env) =>
+        _env = env
         @SDL_Init(SDL2.init_video())
         window = @SDL_CreateWindow("Hello World!".cstring(), 100, 100, 640, 480, SDL2.window_shown())
 
@@ -133,7 +137,9 @@ actor Main
         @SDL_RenderFillRect(renderer, MaybePointer[_SDLRect].none())
 
         @SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255)
-        let rect = _SDLRect(100, 100, 200, 200)
+        let cosine = (((game_time.second.f64() * 1_000_000_000 ) + game_time.nano_second.f64()) / F64(1_000_000_000)).cos()
+        let x : F64 = F64(100) + (F64(100) * cosine)
+        let rect = _SDLRect(x.i32(), 100, 200, 200)
         @SDL_RenderFillRect(renderer, MaybePointer[_SDLRect](rect))
 
         @SDL_RenderPresent(renderer)
@@ -146,6 +152,8 @@ actor Main
                 quit()
             end
         end
+
+        _env.out.print("end frame " + frame_index.string())
 
     fun ref quit() : None =>
         timers.cancel(render_loop)
