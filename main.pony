@@ -88,16 +88,17 @@ class val GameTime
 
 actor Main
 
-    let timers: Timers = Timers
-    let render_loop: Timer tag
+    // let timers: Timers = Timers
+    // let render_loop: Timer tag
+
     let _env : Env
 
+    var _event : SDLEvent
     var window: Pointer[_SDLWindow val] ref
     var renderer: Pointer[_SDLRenderer val] ref
     var is_done : Bool = false
     var game_time : GameTime
     var frame_index : U64 = 0
-
 
     new create(env : Env) =>
         _env = env
@@ -106,22 +107,28 @@ actor Main
 
         renderer = @SDL_CreateRenderer(window, -1, SDL2.renderer_accelerated() or SDL2.renderer_presentvsync())
 
-        let timer = Timer(
-                       object iso
-                       let _game : Main = this
-                       fun ref apply(timer:Timer, count:U64):Bool =>
-                          _game.tick()
-                          true
-                       fun ref cancel(timer:Timer) => 
-                          None
-                       end, 0, 1_000_000) // in nano
-                       
-        render_loop = timer
-        timers(consume timer)
+        // let timer = Timer(
+        //                object iso
+        //                let _game : Main = this
+        //                fun ref apply(timer:Timer, count:U64):Bool =>
+        //                   _game.tick()
+        //                   true
+        //                fun ref cancel(timer:Timer) => 
+        //                   None
+        //                end, 0, 1_000_000) // in nano
+        
+        // render_loop = timer
+        // timers(consume timer)
+
+        _event = SDLEvent
         (let s : I64, let ns : I64)= Time.now()
         game_time = GameTime(s, ns)
 
-    be tick() =>
+        while not is_done do
+            tick()
+        end
+
+    fun ref tick() =>
         (let s : I64, let ns : I64) = Time.now()
         let delta = game_time.delta(s, ns)
         if (delta.second > 1) or (delta.nano_second > 6_000_000) then
@@ -143,11 +150,10 @@ actor Main
         @SDL_RenderFillRect(renderer, MaybePointer[_SDLRect](rect))
 
         @SDL_RenderPresent(renderer)
-        var event = SDLEvent
         var result : I32 = 1 
 
-        while @SDL_PollEvent(event.array.cpointer()) != 0 do
-            var event_type = SDLEventTranslator.type_of_event(event)
+        while @SDL_PollEvent(_event.array.cpointer()) != 0 do
+            var event_type = SDLEventTranslator.type_of_event(_event)
             if event_type == SdlQuitEvent() then
                 quit()
             end
@@ -156,6 +162,7 @@ actor Main
         _env.out.print("end frame " + frame_index.string())
 
     fun ref quit() : None =>
-        timers.cancel(render_loop)
+        //timers.cancel(render_loop)
         @SDL_DestroyRenderer(renderer)
         @SDL_DestroyWindow(window)
+        is_done = true
