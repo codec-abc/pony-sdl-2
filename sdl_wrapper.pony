@@ -1,5 +1,6 @@
 use "lib:SDL2"
 use "lib:SDL2main"
+use "debug"
 use "time"
 use "collections"
 

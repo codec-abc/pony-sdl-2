@@ -58,7 +58,7 @@ actor Main
     be tick() =>
         (let s : I64, let ns : I64) = Time.now()
         let delta = game_time.delta(s, ns)
-        if (delta.second > 1) or (delta.nano_second > 2_000_000) then
+        if (delta.second > 1) or (delta.nano_second > 1_000_000) then
             game_time = GameTime(s, ns)
             let time_running = game_time.delta_prime(start_time)
             loop(delta, time_running)
@@ -92,7 +92,8 @@ actor Main
         end
 
     fun ref quit() : None =>
-        @SDL_DestroyRenderer(renderer)
-        @SDL_DestroyWindow(window)
-        is_done = true
-        _env.out.print("quitting")
+        if not is_done then
+            @SDL_DestroyRenderer(renderer)
+            @SDL_DestroyWindow(window)
+            is_done = true
+        end
