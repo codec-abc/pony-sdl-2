@@ -85,11 +85,17 @@ class val GameTime
             let r = GameTime(s - second, ns - nano_second)
             r
         end
+    
+    fun delta_prime(game_time : GameTime) : GameTime val^ =>
+        if (game_time.nano_second < nano_second) then
+            let r = GameTime(game_time.second - 1 - second, (game_time.nano_second - nano_second) + 1_000_000_000)
+            r
+        else
+            let r = GameTime(game_time.second - second, game_time.nano_second - nano_second)
+            r
+        end
 
 actor Main
-
-    // let timers: Timers = Timers
-    // let render_loop: Timer tag
 
     let _env : Env
 
@@ -97,6 +103,7 @@ actor Main
     var window: Pointer[_SDLWindow val] ref
     var renderer: Pointer[_SDLRenderer val] ref
     var is_done : Bool = false
+    var start_time : GameTime
     var game_time : GameTime
     var frame_index : U64 = 0
 
@@ -107,44 +114,35 @@ actor Main
 
         renderer = @SDL_CreateRenderer(window, -1, SDL2.renderer_accelerated() or SDL2.renderer_presentvsync())
 
-        // let timer = Timer(
-        //                object iso
-        //                let _game : Main = this
-        //                fun ref apply(timer:Timer, count:U64):Bool =>
-        //                   _game.tick()
-        //                   true
-        //                fun ref cancel(timer:Timer) => 
-        //                   None
-        //                end, 0, 1_000_000) // in nano
-        
-        // render_loop = timer
-        // timers(consume timer)
-
         _event = SDLEvent
         (let s : I64, let ns : I64)= Time.now()
-        game_time = GameTime(s, ns)
+        start_time = GameTime(s, ns)
+        game_time = start_time
 
-        while not is_done do
-            tick()
-        end
+        tick()
 
-    fun ref tick() =>
+    be tick() =>
         (let s : I64, let ns : I64) = Time.now()
         let delta = game_time.delta(s, ns)
-        if (delta.second > 1) or (delta.nano_second > 6_000_000) then
+        if (delta.second > 1) or (delta.nano_second > 2_000_000) then
             game_time = GameTime(s, ns)
-            loop(delta)
+            let time_running = game_time.delta_prime(start_time)
+            loop(delta, time_running)
             frame_index = frame_index + 1
         end
 
-    fun ref loop(delta : GameTime)  =>
+        if not is_done then
+            tick()
+        end
+
+    fun ref loop(delta : GameTime, time_running : GameTime)  =>
         @SDL_RenderClear(renderer)
 
         @SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255)
         @SDL_RenderFillRect(renderer, MaybePointer[_SDLRect].none())
 
         @SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255)
-        let cosine = (((game_time.second.f64() * 1_000_000_000 ) + game_time.nano_second.f64()) / F64(1_000_000_000)).cos()
+        let cosine = (((time_running.second.f64() * 1_000_000_000 ) + time_running.nano_second.f64()) / F64(1_000_000_000)).cos()
         let x : F64 = F64(100) + (F64(100) * cosine)
         let rect = _SDLRect(x.i32(), 100, 200, 200)
         @SDL_RenderFillRect(renderer, MaybePointer[_SDLRect](rect))
@@ -159,10 +157,7 @@ actor Main
             end
         end
 
-        _env.out.print("end frame " + frame_index.string())
-
     fun ref quit() : None =>
-        //timers.cancel(render_loop)
         @SDL_DestroyRenderer(renderer)
         @SDL_DestroyWindow(window)
         is_done = true
