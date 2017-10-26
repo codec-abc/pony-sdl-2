@@ -11,7 +11,7 @@ class val GameTime
         second = s
         nano_second = ns
 
-    fun delta(s : I64, ns : I64) : GameTime val^ =>
+    fun delta_s_and_ns(s : I64 val, ns : I64 val) : GameTime val^ =>
         if (ns < nano_second) then
             let r = GameTime(s - 1 - second, (ns - nano_second) + 1_000_000_000)
             r
@@ -20,7 +20,7 @@ class val GameTime
             r
         end
     
-    fun delta_prime(game_time : GameTime) : GameTime val^ =>
+    fun delta(game_time : GameTime) : GameTime val^ =>
         if (game_time.nano_second < nano_second) then
             let r = GameTime(game_time.second - 1 - second, (game_time.nano_second - nano_second) + 1_000_000_000)
             r
@@ -49,7 +49,7 @@ actor Main
         renderer = @SDL_CreateRenderer(window, -1, SDL2.renderer_accelerated() or SDL2.renderer_presentvsync())
 
         _event = SDLEvent
-        (let s : I64, let ns : I64)= Time.now()
+        (let s : I64, let ns : I64) = Time.now()
         start_time = GameTime(s, ns)
         game_time = start_time
 
@@ -57,10 +57,10 @@ actor Main
 
     be tick() =>
         (let s : I64, let ns : I64) = Time.now()
-        let delta = game_time.delta(s, ns)
+        let delta = game_time.delta_s_and_ns(s, ns)
         if (delta.second > 1) or (delta.nano_second > 1_000_000) then
             game_time = GameTime(s, ns)
-            let time_running = game_time.delta_prime(start_time)
+            let time_running = game_time.delta(start_time)
             loop(delta, time_running)
             frame_index = frame_index + 1
         end
