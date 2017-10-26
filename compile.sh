@@ -1,1 +1,1 @@
-ponyc -o ./out
+ponyc -d -o ./out
