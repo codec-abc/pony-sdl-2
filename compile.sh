@@ -1,1 +1,1 @@
-ponyc -d -o ./out
+ponyc --path ./lib -d -o ./out ./src
