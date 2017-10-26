@@ -77,10 +77,11 @@ actor Main
     fun ref game_main_loop(delta : GameTime)  =>
         @SDL_RenderClear(_renderer)
 
-        @SDL_SetRenderDrawColor(_renderer, 0, 0, 255, 255)
+        @SDL_SetRenderDrawColor(_renderer, 0, 0, 0, 255)
         @SDL_RenderFillRect(_renderer, MaybePointer[_SDLRect].none())
 
         @SDL_SetRenderDrawColor(_renderer, 255, 0, 0, 255)
+        
         let cosine = 
             (
                 (
