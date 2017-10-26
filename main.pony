@@ -2,6 +2,7 @@ use "lib:SDL2"
 use "lib:SDL2main"
 use "time"
 use "debug"
+use "collections"
 
 use @SDL_Init[I32](flags: U32)
 use @SDL_CreateWindow[Pointer[_SDLWindow val] ref](title: Pointer[U8] tag, x: I32, y: I32, w: I32, h: I32, flags: U32)
@@ -26,11 +27,15 @@ struct ref _SDLRect
        w = w1
        h = h1
 
-struct SDLEvent
+class SDLEvent
     var array : Array[U8]
 
     new create() =>
-       array = Array[U8].init(0, 56)
+        array = Array[U8]()
+        for i in Range(0, 56) do
+            array.push(0)
+        end
+            
 
 // see https://github.com/Rust-SDL2/rust-sdl2/blob/6e9a00a0d254c6b6e3cc0024494f84c1cc577534/sdl2-sys/src/event.rs
 primitive SdlQuitEvent
@@ -46,7 +51,8 @@ primitive SDLEventTranslator
             var byte3 : U8 = event.array(3)?
             
             // TODO use byte shiffting instead of that ugly multiplications
-            byte0.u32() + (byte1.u32() * 256) + (byte2.u32() * 256 * 256) + (byte3.u32() * 256 * 256 * 256)
+            let result = byte0.u32() + (byte1.u32() * 256) + (byte2.u32() * 256 * 256) + (byte3.u32() * 256 * 256 * 256)
+            result
         else
             0
         end
@@ -161,3 +167,4 @@ actor Main
         @SDL_DestroyRenderer(renderer)
         @SDL_DestroyWindow(window)
         is_done = true
+        _env.out.print("quitting")
