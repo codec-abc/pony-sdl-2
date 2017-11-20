@@ -3,7 +3,6 @@ use "debug"
 use "collections"
 
 actor Main
-
     let _env : Env
 
     var _event : SDLEvent
@@ -84,7 +83,7 @@ actor Main
 
         while @SDL_PollEvent(_event.array.cpointer()) != 0 do
             var event_type = SDLEventTranslator.type_of_event(_event)
-            if event_type == SdlQuitEvent() then
+            if event_type == SDL2EventId.quit() then
                 quit()
             end
         end
