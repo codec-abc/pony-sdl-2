@@ -38,7 +38,7 @@ class SDLEvent
             array.push(0)
         end
 
-primitive SDL2
+primitive SDL2FLAG
     fun init_video(): U32 =>
          0x00000020
 

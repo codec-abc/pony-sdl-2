@@ -20,10 +20,22 @@ actor Main
 
     new create(env : Env) =>
         _env = env
-        @SDL_Init(SDL2.init_video())
+        @SDL_Init(SDL2FLAG.init_video())
 
-        _window = @SDL_CreateWindow("Hello World!".cstring(), 100, 100, 640, 480, SDL2.window_shown())
-        _renderer = @SDL_CreateRenderer(_window, -1, SDL2.renderer_accelerated() or SDL2.renderer_presentvsync())
+        _window = @SDL_CreateWindow(
+            "Hello World!".cstring(), 
+            100,
+            100, 
+            640, 
+            480, 
+            SDL2FLAG.window_shown()
+        )
+
+        _renderer = @SDL_CreateRenderer(
+            _window,
+            -1, 
+            SDL2FLAG.renderer_accelerated() or SDL2FLAG.renderer_presentvsync()
+        )
         _event = SDLEvent
 
         (let s : I64, let ns : I64) = Time.now()
