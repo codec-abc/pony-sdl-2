@@ -5,10 +5,10 @@ use "collections"
 actor Main
     let _env : Env
 
-    var _event : SDLEvent
+    var _event : SDL2StructEvent
 
-    var _window: Pointer[_SDLWindow val] ref
-    var _renderer: Pointer[_SDLRenderer val] ref
+    var _window: Pointer[_SDL2Window val] ref
+    var _renderer: Pointer[_SDL2Renderer val] ref
     var _is_done : Bool = false
 
     let _start_time : GameTime
@@ -19,7 +19,7 @@ actor Main
 
     new create(env : Env) =>
         _env = env
-        @SDL_Init(SDL2FLAG.init_video())
+        @SDL_Init(SDL2Flag.init_video())
 
         _window = @SDL_CreateWindow(
             "Hello World!".cstring(), 
@@ -27,15 +27,15 @@ actor Main
             100, 
             640, 
             480, 
-            SDL2FLAG.window_shown()
+            SDL2Flag.window_shown()
         )
 
         _renderer = @SDL_CreateRenderer(
             _window,
             -1, 
-            SDL2FLAG.renderer_accelerated() or SDL2FLAG.renderer_presentvsync()
+            SDL2Flag.renderer_accelerated() or SDL2Flag.renderer_presentvsync()
         )
-        _event = SDLEvent
+        _event = SDL2StructEvent
 
         (let s : I64, let ns : I64) = Time.now()
         _start_time = GameTime(s, ns)
@@ -62,7 +62,7 @@ actor Main
         @SDL_RenderClear(_renderer)
 
         @SDL_SetRenderDrawColor(_renderer, 0, 0, 0, 255)
-        @SDL_RenderFillRect(_renderer, MaybePointer[_SDLRect].none())
+        @SDL_RenderFillRect(_renderer, MaybePointer[_SDL2Rect].none())
 
         @SDL_SetRenderDrawColor(_renderer, 255, 0, 0, 255)
 
@@ -75,17 +75,19 @@ actor Main
             ).cos()
 
         let x : F64 = F64(100) + (F64(100) * cosine)
-        let rect = _SDLRect(x.i32(), 100, 200, 200)
-        @SDL_RenderFillRect(_renderer, MaybePointer[_SDLRect](rect))
+        let rect = _SDL2Rect(x.i32(), 100, 200, 200)
+        @SDL_RenderFillRect(_renderer, MaybePointer[_SDL2Rect](rect))
 
         @SDL_RenderPresent(_renderer)
         var result : I32 = 1 
 
         while @SDL_PollEvent(_event.array.cpointer()) != 0 do
-            var event_type = SDLEventTranslator.type_of_event(_event)
-            if event_type == SDL2EventId.quit() then
-                quit()
-            end
+            var event_type = SDL2EventTranslator.type_of_event(_event)
+            match event_type
+                | SDL2QuitEvent => quit()
+                | SDL2KeyBoardEvent => Debug.out("keyboard event")
+                | None => None
+            end 
         end
 
     fun ref quit() : None =>

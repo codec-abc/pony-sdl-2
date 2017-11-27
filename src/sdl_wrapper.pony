@@ -3,21 +3,26 @@ use "lib:SDL2main"
 use "debug"
 use "time"
 use "collections"
+use "buffered"
 
-// see https://github.com/Rust-SDL2/rust-sdl2/blob/6e9a00a0d254c6b6e3cc0024494f84c1cc577534/sdl2-sys/src/event.rs
+// see 
+// https://wiki.libsdl.org/SDL_Event#table and
+// https://wiki.libsdl.org/SDL_Event#line-10 and
+// https://github.com/spurious/SDL-mirror/blob/0a931e84e3739e636783dbaeaf9401e431d5cfaf/include/SDL_events.h and
+// https://github.com/Rust-SDL2/rust-sdl2/blob/6e9a00a0d254c6b6e3cc0024494f84c1cc577534/sdl2-sys/src/event.rs
 
 use @SDL_Init[I32](flags: U32)
-use @SDL_CreateWindow[Pointer[_SDLWindow val] ref](title: Pointer[U8] tag, x: I32, y: I32, w: I32, h: I32, flags: U32)
-use @SDL_CreateRenderer[Pointer[_SDLRenderer val] ref](window: Pointer[_SDLWindow val] box, index: I32, flags: U32)
-use @SDL_DestroyRenderer[None](renderer: Pointer[_SDLRenderer val] box)
-use @SDL_DestroyWindow[None](window: Pointer[_SDLWindow val] box)
-use @SDL_RenderClear[I32](renderer: Pointer[_SDLRenderer val] box)
-use @SDL_RenderPresent[None](renderer: Pointer[_SDLRenderer val] box)
-use @SDL_SetRenderDrawColor[I32](renderer: Pointer[_SDLRenderer val] box, r: U8, g: U8, b: U8, a: U8)
-use @SDL_RenderFillRect[I32](renderer: Pointer[_SDLRenderer val] box, rect: MaybePointer[_SDLRect ref] box)
+use @SDL_CreateWindow[Pointer[_SDL2Window val] ref](title: Pointer[U8] tag, x: I32, y: I32, w: I32, h: I32, flags: U32)
+use @SDL_CreateRenderer[Pointer[_SDL2Renderer val] ref](window: Pointer[_SDL2Window val] box, index: I32, flags: U32)
+use @SDL_DestroyRenderer[None](renderer: Pointer[_SDL2Renderer val] box)
+use @SDL_DestroyWindow[None](window: Pointer[_SDL2Window val] box)
+use @SDL_RenderClear[I32](renderer: Pointer[_SDL2Renderer val] box)
+use @SDL_RenderPresent[None](renderer: Pointer[_SDL2Renderer val] box)
+use @SDL_SetRenderDrawColor[I32](renderer: Pointer[_SDL2Renderer val] box, r: U8, g: U8, b: U8, a: U8)
+use @SDL_RenderFillRect[I32](renderer: Pointer[_SDL2Renderer val] box, rect: MaybePointer[_SDL2Rect ref] box)
 use @SDL_PollEvent[I32](event : Pointer[U8] tag)
 
-struct ref _SDLRect
+struct ref _SDL2Rect
     var x: I32 = 0
     var y: I32 = 0
     var w: I32 = 0
@@ -29,20 +34,26 @@ struct ref _SDLRect
        w = w1
        h = h1
 
-class SDLEvent
-    var array : Array[U8]
+class SDL2StructEvent
+    var array : Array[U8 val] val
 
     new create() =>
-        array = Array[U8]()
+        let array' : Array[U8 val] iso = recover iso Array[U8 val]() end
         for i in Range(0, 56) do
-            array.push(0)
+            array'.push(0)
         end
+        array = recover val consume array' end
 
-primitive SDL2FLAG
+primitive SDL2Flag
     fun init_video(): U32 =>0x00000020
     fun window_shown(): U32 =>  0x00000004
     fun renderer_accelerated(): U32 => 0x00000002
     fun renderer_presentvsync(): U32 => 0x00000004
+
+primitive SDL2KeyBoardEvent
+primitive SDL2QuitEvent
+
+type SDL2Event is (SDL2KeyBoardEvent | SDL2QuitEvent | None)
 
 primitive SDL2EventId
     fun first_event() : U32 => 0
@@ -87,25 +98,90 @@ primitive SDL2EventId
     fun user_event() : U32 => 32768
     fun last_event() : U32 => 65535
 
-primitive SDLEventTranslator
+primitive KeyDown
+primitive KeyUp
+type KeyType is (KeyDown | KeyUp)
 
-    fun type_of_event(event : SDLEvent) : U32 =>
+primitive KeyPressed
+primitive KeyReleased
+type KeyState is (KeyPressed | KeyReleased)
+
+class val KeyBoardEvent
+    let key_type : KeyType
+    let timestamp: U32
+    let window_id: U32
+    let key_state : KeyState
+    let repeated: Bool
+
+    new val create(
+        key_type' : KeyType,
+        timestamp' : U32,
+        window_id' : U32,
+        key_state' : KeyState,
+        repeated' : Bool
+    ) =>
+        key_type = key_type'
+        timestamp = timestamp'
+        window_id = window_id'
+        key_state = key_state'
+        repeated = repeated'
+
+primitive SDL2EventTranslator
+
+    fun _type_of_event(event : SDL2StructEvent) : U32? =>
+        let reader = Reader
+        reader.append(event.array)
+        reader.peek_u32_le(where offset = 0)?
+    
+    fun type_of_event(event : SDL2StructEvent) : SDL2Event =>
         try
-            var byte0 : U8 = event.array(0)?
-            var byte1 : U8 = event.array(1)?
-            var byte2 : U8 = event.array(2)?
-            var byte3 : U8 = event.array(3)?
-            
-            let result = 
-                byte0.u32() + 
-                (byte1.u32() << 8) + 
-                (byte2.u32() << 16) + 
-                (byte3.u32() << 24)
-
-            result
+            let event_type = _type_of_event(event)?
+            if 
+                (event_type == SDL2EventId.key_down()) or
+                (event_type == SDL2EventId.key_up()) 
+            then
+                SDL2KeyBoardEvent
+            elseif 
+                event_type == SDL2EventId.quit() 
+            then
+                SDL2QuitEvent
+            else
+                None
+            end
         else
-            0
+            None
+        end
+    
+    fun to_keyboard_event(event : SDL2StructEvent) : KeyBoardEvent ? =>
+        let event_type =  _type_of_event(event)?
+        if
+            (event_type == SDL2EventId.key_down()) or
+            (event_type == SDL2EventId.key_up())
+        then
+            let reader = Reader
+            reader.append(event.array)
+            KeyBoardEvent( where
+                key_type' = 
+                    if event_type == SDL2EventId.key_down() 
+                    then 
+                        KeyDown
+                    else 
+                        KeyUp
+                    end,
+                timestamp' = reader.peek_u32_le(where offset = 3)?,
+                window_id' = reader.peek_u32_le(where offset = 7)?,
+                key_state' = 
+                    if reader.peek_u8(where offset = 8)? == 1 
+                    then 
+                        KeyPressed
+                    else 
+                        KeyReleased
+                    end,
+                repeated' = reader.peek_u8(where offset = 9)? != 0
+            )
+        else
+            error
         end
 
-primitive _SDLWindow
-primitive _SDLRenderer
+primitive _SDL2Window
+primitive _SDL2Renderer
