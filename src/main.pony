@@ -84,8 +84,13 @@ actor Main
         while @SDL_PollEvent(_event.array.cpointer()) != 0 do
             var event_type = SDL2EventTranslator.type_of_event(_event)
             match event_type
-                | SDL2QuitEvent => quit()
-                | SDL2KeyBoardEvent => Debug.out("keyboard event")
+                | QuitEvent => quit()
+                | let kb_event : KeyBoardEvent =>
+                    let kb_key = kb_event.key_information
+                    if (kb_key.virtual_key_code == KeyCode.virtual_key_code_q())
+                    then
+                        quit()
+                    end
                 | None => None
             end 
         end

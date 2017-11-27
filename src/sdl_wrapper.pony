@@ -50,10 +50,9 @@ primitive SDL2Flag
     fun renderer_accelerated(): U32 => 0x00000002
     fun renderer_presentvsync(): U32 => 0x00000004
 
-primitive SDL2KeyBoardEvent
-primitive SDL2QuitEvent
+primitive QuitEvent
 
-type SDL2Event is (SDL2KeyBoardEvent | SDL2QuitEvent | None)
+type SDL2Event is (KeyBoardEvent | QuitEvent | None)
 
 primitive SDL2EventId
     fun first_event() : U32 => 0
@@ -106,29 +105,46 @@ primitive KeyPressed
 primitive KeyReleased
 type KeyState is (KeyPressed | KeyReleased)
 
+class val KeyInformation
+    let scancode : U32
+    let virtual_key_code : I32
+    let modifiers : U16
+
+    new val create(
+        scancode' : U32,
+        virtual_key_code' : I32,
+        modifiers' : U16
+    ) =>
+        scancode = scancode'
+        virtual_key_code = virtual_key_code'
+        modifiers = modifiers'
+
 class val KeyBoardEvent
     let key_type : KeyType
     let timestamp: U32
     let window_id: U32
     let key_state : KeyState
     let repeated: Bool
+    let key_information : KeyInformation
 
     new val create(
         key_type' : KeyType,
         timestamp' : U32,
         window_id' : U32,
         key_state' : KeyState,
-        repeated' : Bool
+        repeated' : Bool,
+        key_information' : KeyInformation
     ) =>
         key_type = key_type'
         timestamp = timestamp'
         window_id = window_id'
         key_state = key_state'
         repeated = repeated'
+        key_information = key_information'
 
 primitive SDL2EventTranslator
 
-    fun _type_of_event(event : SDL2StructEvent) : U32? =>
+    fun _type_of_event(event : SDL2StructEvent) : U32 ? =>
         let reader = Reader
         reader.append(event.array)
         reader.peek_u32_le(where offset = 0)?
@@ -140,11 +156,11 @@ primitive SDL2EventTranslator
                 (event_type == SDL2EventId.key_down()) or
                 (event_type == SDL2EventId.key_up()) 
             then
-                SDL2KeyBoardEvent
+                try to_keyboard_event(event)? else None end
             elseif 
                 event_type == SDL2EventId.quit() 
             then
-                SDL2QuitEvent
+                QuitEvent
             else
                 None
             end
@@ -168,16 +184,34 @@ primitive SDL2EventTranslator
                     else 
                         KeyUp
                     end,
-                timestamp' = reader.peek_u32_le(where offset = 3)?,
-                window_id' = reader.peek_u32_le(where offset = 7)?,
+                timestamp' = reader.peek_u32_le(where offset = 4)?,
+                window_id' = reader.peek_u32_le(where offset = 8)?,
                 key_state' = 
-                    if reader.peek_u8(where offset = 8)? == 1 
+                    if reader.peek_u8(where offset = 12)? == 1 
                     then 
                         KeyPressed
                     else 
                         KeyReleased
                     end,
-                repeated' = reader.peek_u8(where offset = 9)? != 0
+                repeated' = reader.peek_u8(where offset = 13)? != 0,
+                key_information' = _extract_key_information(event)?
+            )
+        else
+            error
+        end
+    
+    fun _extract_key_information(event: SDL2StructEvent) : KeyInformation ? =>
+        let event_type =  _type_of_event(event)?
+        if
+            (event_type == SDL2EventId.key_down()) or
+            (event_type == SDL2EventId.key_up())
+        then
+            let reader = Reader
+            reader.append(event.array)
+            KeyInformation( where
+                scancode' = reader.peek_u32_le(where offset = 16)?,
+                virtual_key_code' = reader.peek_i32_le(where offset = 20)?,
+                modifiers' = reader.peek_u16_le(where offset = 24)?
             )
         else
             error
