@@ -5,12 +5,6 @@ use "time"
 use "collections"
 use "event"
 
-// see 
-// https://wiki.libsdl.org/SDL_Event#table and
-// https://wiki.libsdl.org/SDL_Event#line-10 and
-// https://github.com/spurious/SDL-mirror/blob/0a931e84e3739e636783dbaeaf9401e431d5cfaf/include/SDL_events.h and
-// https://github.com/Rust-SDL2/rust-sdl2/blob/6e9a00a0d254c6b6e3cc0024494f84c1cc577534/sdl2-sys/src/event.rs
-
 use @SDL_Init[I32](flags: U32)
 use @SDL_CreateWindow[Pointer[_SDL2Window val] ref](title: Pointer[U8] tag, x: I32, y: I32, w: I32, h: I32, flags: U32)
 use @SDL_CreateRenderer[Pointer[_SDL2Renderer val] ref](window: Pointer[_SDL2Window val] box, index: I32, flags: U32)

@@ -2,6 +2,12 @@ use "collections"
 use "buffered"
 use "../keyboard"
 
+// see 
+// https://wiki.libsdl.org/SDL_Event#table and
+// https://wiki.libsdl.org/SDL_Event#line-10 and
+// https://github.com/spurious/SDL-mirror/blob/0a931e84e3739e636783dbaeaf9401e431d5cfaf/include/SDL_events.h and
+// https://github.com/Rust-SDL2/rust-sdl2/blob/6e9a00a0d254c6b6e3cc0024494f84c1cc577534/sdl2-sys/src/event.rs
+
 class SDL2StructEvent
     var array : Array[U8 val] val
 
@@ -26,7 +32,7 @@ primitive SDL2EventTranslator
                 (event_type == SDL2EventId.key_down()) or
                 (event_type == SDL2EventId.key_up()) 
             then
-                try to_keyboard_event(event)? else None end
+                try KeyBoardEventHandler.to_keyboard_event(event, event_type)? else None end
             elseif 
                 event_type == SDL2EventId.quit() 
             then
@@ -36,55 +42,6 @@ primitive SDL2EventTranslator
             end
         else
             None
-        end
-    
-    fun to_keyboard_event(event : SDL2StructEvent) : KeyBoardEvent ? =>
-        let event_type =  _type_of_event(event)?
-        if
-            (event_type == SDL2EventId.key_down()) or
-            (event_type == SDL2EventId.key_up())
-        then
-            let reader = Reader
-            reader.append(event.array)
-            KeyBoardEvent( where
-                key_type' = 
-                    if event_type == SDL2EventId.key_down() 
-                    then 
-                        KeyDown
-                    else 
-                        KeyUp
-                    end,
-                timestamp' = reader.peek_u32_le(where offset = 4)?,
-                window_id' = reader.peek_u32_le(where offset = 8)?,
-                key_state' = 
-                    if reader.peek_u8(where offset = 12)? == 1 
-                    then 
-                        KeyPressed
-                    else 
-                        KeyReleased
-                    end,
-                repeated' = reader.peek_u8(where offset = 13)? != 0,
-                key_information' = _extract_key_information(event)?
-            )
-        else
-            error
-        end
-    
-    fun _extract_key_information(event: SDL2StructEvent) : KeyInformation ? =>
-        let event_type =  _type_of_event(event)?
-        if
-            (event_type == SDL2EventId.key_down()) or
-            (event_type == SDL2EventId.key_up())
-        then
-            let reader = Reader
-            reader.append(event.array)
-            KeyInformation( where
-                scancode' = reader.peek_u32_le(where offset = 16)?,
-                virtual_key_code' = reader.peek_i32_le(where offset = 20)?,
-                modifiers' = reader.peek_u16_le(where offset = 24)?
-            )
-        else
-            error
         end
 
 primitive SDL2EventId
