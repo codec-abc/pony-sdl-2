@@ -1,6 +1,8 @@
 use "time"
 use "debug"
 use "collections"
+use "event"
+use "keyboard"
 
 class ref Vector2D
     var x : F64
