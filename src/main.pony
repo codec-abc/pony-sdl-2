@@ -85,29 +85,7 @@ actor Main
         var result : I32 = 1 
 
         while @SDL_PollEvent(_event.array.cpointer()) != 0 do
-            var event_type = SDL2EventTranslator.type_of_event(_event)
-            match event_type
-                | QuitEvent => quit()
-                | let kb_event : KeyBoardEvent =>
-                    if not kb_event.repeated then
-                        let delta_speed : F64 = 
-                            match kb_event.key_state 
-                                | KeyPressed => 1 
-                                | KeyReleased => -1 
-                            end
-                        let key_code = kb_event.key_information.virtual_key_code
-                        if (key_code == KeyCode.virtual_key_code_up()) then
-                            _speed.y = _speed.y + delta_speed
-                        elseif (key_code == KeyCode.virtual_key_code_down()) then
-                            _speed.y = _speed.y - delta_speed
-                        elseif (key_code == KeyCode.virtual_key_code_right()) then
-                            _speed.x = _speed.x - delta_speed
-                        elseif (key_code == KeyCode.virtual_key_code_left()) then
-                            _speed.x = _speed.x + delta_speed
-                        end
-                    end
-                | None => None
-            end 
+            process_event()
         end
 
         let delta_time_ms : F64 = 
@@ -128,6 +106,31 @@ actor Main
 
         @SDL_RenderFillRect(_renderer, MaybePointer[_SDL2Rect](rect))
         @SDL_RenderPresent(_renderer)
+
+    fun ref process_event() =>
+        var event_type = SDL2EventTranslator.type_of_event(_event)
+        match event_type
+            | QuitEvent => quit()
+            | let kb_event : KeyBoardEvent =>
+                if not kb_event.repeated then
+                    let delta_speed : F64 = 
+                        match kb_event.key_state 
+                            | KeyPressed => 1 
+                            | KeyReleased => -1 
+                        end
+                    let key_code = kb_event.key_information.virtual_key_code
+                    if (key_code == KeyCode.virtual_key_code_up()) then
+                        _speed.y = _speed.y + delta_speed
+                    elseif (key_code == KeyCode.virtual_key_code_down()) then
+                        _speed.y = _speed.y - delta_speed
+                    elseif (key_code == KeyCode.virtual_key_code_right()) then
+                        _speed.x = _speed.x - delta_speed
+                    elseif (key_code == KeyCode.virtual_key_code_left()) then
+                        _speed.x = _speed.x + delta_speed
+                    end
+                end
+            | None => None
+        end
 
     fun ref quit() : None =>
         if not _is_done then
