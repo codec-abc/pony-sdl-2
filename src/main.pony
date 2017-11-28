@@ -1,8 +1,11 @@
+// look at this to  draw texture  https://gamedev.stackexchange.com/questions/72613/how-can-i-render-a-texture-to-the-screen-in-sdl2
+
 use "time"
 use "debug"
 use "collections"
 use "event"
 use "keyboard"
+
 
 class ref Vector2D
     var x : F64
@@ -22,8 +25,8 @@ actor Main
 
     var _event : SDL2StructEvent
 
-    var _window: Pointer[_SDL2Window val] ref
-    var _renderer: Pointer[_SDL2Renderer val] ref
+    var _window: Pointer[SDL2Window val] ref
+    var _renderer: Pointer[SDL2Renderer val] ref
     var _is_done : Bool = false
 
     let _start_time : GameTime
@@ -34,6 +37,8 @@ actor Main
 
     var _square_position : Vector2D = Vector2D(50, 50)
     var _speed : Vector2D = Vector2D(0, 0)
+
+    var _texture : Pointer[SDL2Texture val] ref
 
     new create(env : Env) =>
         _env = env
@@ -60,6 +65,15 @@ actor Main
         _time_running = GameTime(0, 0)
         _game_time = _start_time
 
+        let surface_pointer : Pointer[SDL2Surface val] ref = 
+            @IMG_Load("./assets/mario.png".cstring())
+
+        if not surface_pointer.is_null() then
+            _texture = @SDL_CreateTextureFromSurface(_renderer, surface_pointer)
+        else
+            _texture = Pointer[SDL2Texture]
+        end
+
         tick()
 
     be tick() =>
@@ -80,7 +94,7 @@ actor Main
         @SDL_RenderClear(_renderer)
 
         @SDL_SetRenderDrawColor(_renderer, 0, 0, 0, 255)
-        @SDL_RenderFillRect(_renderer, MaybePointer[_SDL2Rect].none())
+        @SDL_RenderFillRect(_renderer, MaybePointer[SDL2Rect].none())
 
         var result : I32 = 1 
 
@@ -92,7 +106,6 @@ actor Main
             (( _time_running.second.f64() * 1_000_000_000 ) + 
             _time_running.nano_second.f64()) / 1_000_000
 
-
         let scale_factor : F64 = 0.001
         _square_position = 
             _square_position + 
@@ -102,9 +115,14 @@ actor Main
             )
 
         @SDL_SetRenderDrawColor(_renderer, 255, 0, 0, 255)
-        let rect = _SDL2Rect(_square_position.x.i32(), _square_position.y.i32(), 30, 30)
+        let rect = SDL2Rect(_square_position.x.i32(), _square_position.y.i32(), 30, 30)
 
-        @SDL_RenderFillRect(_renderer, MaybePointer[_SDL2Rect](rect))
+        if _texture.is_null() then
+            @SDL_RenderFillRect(_renderer, MaybePointer[SDL2Rect](rect))
+        else
+            @SDL_RenderCopy(_renderer, _texture, MaybePointer[SDL2Rect].none(), MaybePointer[SDL2Rect](rect))
+        end
+
         @SDL_RenderPresent(_renderer)
 
     fun ref process_event() =>
