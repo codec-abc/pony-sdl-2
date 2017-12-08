@@ -13,6 +13,7 @@ use @SDL_RenderClear[I32](renderer: Pointer[SDL2Renderer val] box)
 use @SDL_RenderPresent[None](renderer: Pointer[SDL2Renderer val] box)
 use @SDL_PollEvent[I32](event : Pointer[U8] tag)
 use @IMG_Load[Pointer[SDL2Surface val] ref](path : Pointer[U8 val] tag)
+use @SDL_FreeSurface[None](surface: Pointer[SDL2Surface val] ref)
 
 use @SDL_CreateWindow[Pointer[SDL2Window val] ref](
     title: Pointer[U8] tag, 

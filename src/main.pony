@@ -6,7 +6,6 @@ use "collections"
 use "event"
 use "keyboard"
 
-
 class ref Vector2D
     var x : F64
     var y : F64
@@ -35,21 +34,18 @@ actor Main
 
     var _frame_index : U64 = 0
 
-    var _square_position : Vector2D = Vector2D(50, 50)
-    var _speed : Vector2D = Vector2D(0, 0)
-
-    var _texture : Pointer[SDL2Texture val] ref
+    var _sokoban : Sokoban
 
     new create(env : Env) =>
         _env = env
         @SDL_Init(SDL2Flag.init_video())
 
         _window = @SDL_CreateWindow(
-            "Hello World!".cstring(), 
+            "Sokoban".cstring(), 
             100,
             100, 
             640, 
-            480, 
+            512, 
             SDL2Flag.window_shown()
         )
 
@@ -58,6 +54,7 @@ actor Main
             -1, 
             SDL2Flag.renderer_accelerated() or SDL2Flag.renderer_presentvsync()
         )
+
         _event = SDL2StructEvent
 
         (let s : I64, let ns : I64) = Time.now()
@@ -66,12 +63,14 @@ actor Main
         _game_time = _start_time
 
         let surface_pointer : Pointer[SDL2Surface val] ref = 
-            @IMG_Load("./assets/mario.png".cstring())
+            @IMG_Load("./assets/Spritesheet/sokoban_spritesheet@2.png".cstring())
 
         if not surface_pointer.is_null() then
-            _texture = @SDL_CreateTextureFromSurface(_renderer, surface_pointer)
+            let texture = @SDL_CreateTextureFromSurface(_renderer, surface_pointer)
+            @SDL_FreeSurface(surface_pointer)
+            _sokoban = Sokoban(texture)
         else
-            _texture = Pointer[SDL2Texture]
+            _sokoban = Sokoban.create_no_texture()
         end
 
         tick()
@@ -106,22 +105,8 @@ actor Main
             (( _time_running.second.f64() * 1_000_000_000 ) + 
             _time_running.nano_second.f64()) / 1_000_000
 
-        let scale_factor : F64 = 0.001
-        _square_position = 
-            _square_position + 
-            Vector2D(where
-                x' = _speed.x * delta_time_ms * scale_factor, 
-                y' = _speed.y * delta_time_ms * scale_factor
-            )
-
-        @SDL_SetRenderDrawColor(_renderer, 255, 0, 0, 255)
-        let rect = SDL2Rect(_square_position.x.i32(), _square_position.y.i32(), 30, 30)
-
-        if _texture.is_null() then
-            @SDL_RenderFillRect(_renderer, MaybePointer[SDL2Rect](rect))
-        else
-            @SDL_RenderCopy(_renderer, _texture, MaybePointer[SDL2Rect].none(), MaybePointer[SDL2Rect](rect))
-        end
+        _sokoban.tick_update(delta_time_ms)
+        _sokoban.draw(_renderer)
 
         @SDL_RenderPresent(_renderer)
 
@@ -130,23 +115,7 @@ actor Main
         match event_type
             | QuitEvent => quit()
             | let kb_event : KeyBoardEvent =>
-                if not kb_event.repeated then
-                    let delta_speed : F64 = 
-                        match kb_event.key_state 
-                            | KeyPressed => 1 
-                            | KeyReleased => -1 
-                        end
-                    let key_code = kb_event.key_information.virtual_key_code
-                    if (key_code == KeyCode.virtual_key_code_up()) then
-                        _speed.y = _speed.y + delta_speed
-                    elseif (key_code == KeyCode.virtual_key_code_down()) then
-                        _speed.y = _speed.y - delta_speed
-                    elseif (key_code == KeyCode.virtual_key_code_right()) then
-                        _speed.x = _speed.x - delta_speed
-                    elseif (key_code == KeyCode.virtual_key_code_left()) then
-                        _speed.x = _speed.x + delta_speed
-                    end
-                end
+                _sokoban.handle_keyboard_event(kb_event)
             | None => None
         end
 
