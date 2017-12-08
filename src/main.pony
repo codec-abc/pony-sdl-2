@@ -10,9 +10,12 @@ class ref Vector2D
     var x : F64
     var y : F64
 
-    new create(x' : F64, y': F64) =>
+    new iso create(x' : F64, y': F64) =>
         x = x'
         y = y'
+
+    fun box clone() : Vector2D iso^ =>
+        Vector2D(x, y)
 
     fun ref add(other : Vector2D) : Vector2D =>
         let x' = x + other.x
@@ -45,7 +48,7 @@ actor Main
             100,
             100, 
             640, 
-            512, 
+            640, 
             SDL2Flag.window_shown()
         )
 
